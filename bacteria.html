@@ -1,0 +1,57 @@
+<!doctype html>
+<html ng-app="bacteria">
+<head>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.min.js"></script>
+	<script src="http://underscorejs.org/underscore-min.js"></script>
+	<script src="game.js"></script>
+	<script src="app.js"></script>
+	<link rel="stylesheet" href="display.css" type="text/css" />
+</head>
+<body>
+	<gameboards>
+		<gameboard-mini ng-repeat="gameboard in gameboards" ng-click="selectGameboard (gameboard);" ng-class="gameboard.selected ? 'selected':''">
+			<gameboard ng-style="{width:(gameboard.configuration.w.length * 5 )+'px'}">
+				<slot ng-repeat="slot in gameboard.iterator" ng-class="[slot.type.id]"></slot>
+			</gameboard>
+		</gameboard-mini>
+	</gameboards>
+	<br>
+	<hr/>
+	<div>
+		<score class="p1">{{ gameboard.scores.p1 }}</score>
+		<score class="p2"">{{ gameboard.scores.p2 }}</score>
+		<score class="p1">{{ gameboard.max_scores.p1 }}</score>
+		<score class="p2"">{{ gameboard.max_scores.p2 }}</score>
+		<button ng-click="gameboard.nextTurn();" style="width: 100px;"
+			ng-class="gameboard.turn.id == 'p1' ? 'green': 'red'">{{ gameboard.turn.id == 'p1' ? "GREEN": "RED" }}</button>
+		<button ng-click="gameboard.undo();" ng-disabled="gameboard.history.length == 0">Undo</button>
+		<label><input type="checkbox" ng-model="gameboard.p1_cpu"> Green CPU</label>
+		<label><input type="checkbox" ng-model="gameboard.p2_cpu"> Red CPU</label>
+	</div>
+	<gameboard class="big" ng-class="[build ? 'build': '', 'turn_' + gameboard.turn.id]" ng-style="{width:(configuration.w.length * 52 )+'px'}">
+<!-- 		<slot ng-repeat="slot in gameboard.iterator" ng-class="[slot.type.id, slot.state]" ng-class="slot.state"
+			ng-click="clickSlot (slot);" ng-mouseover="hoverSlot (slot);"></slot> -->
+		<slot ng-repeat="slot in gameboard.iterator" ng-class="slot.states" ng-click="clickSlot (slot);"
+			ng-mouseover="mouseoverSlot (slot);" ng-mouseleave="mouseleaveSlot (slot);">
+		{{ slot.depth }}[{{ slot.i }}]</slot>
+	</gameboard>
+	<hr/>
+	<div>
+		<button ng-click="build = !build;">Build Mode {{ build ? "ON": "OFF" }}</button>
+		<button ng-click="reset();">Reset</button>
+	</div>
+	<hr/>
+	Board size: <input type="number" ng-model="configuration.w.length" /> x
+		<input type="number" ng-model="configuration.h.length" />
+	Symetric offset: <input type="number" ng-model="configuration.w.sym_offset" />
+		<input type="number" ng-model="configuration.h.sym_offset" />
+	
+	<textarea class="configuration" readonly>{{ configuration }}</textarea>
+	
+	<hr/>
+	
+	<textarea class="configuration" ng-model="configuration_textarea"></textarea>
+	<button ng-click="load();">Load</button>
+	
+</body>
+</html>
