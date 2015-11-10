@@ -67,115 +67,117 @@ app.directive('slot', function () {
 	var previous_slot, previous_action;
 	return {
 		restrict: 'E',
-		link: function(scope, element) {
-			scope.clickSlot = function (slot) {
-				if (scope.build) {
-//					console.log(slot.type.id, TRANSITIONS[slot.type.id]);
-					slot.changeType(TRANSITIONS[slot.type.id], true);
-					return;
-				}
-				if (slot.states.duplicate) {
-					slot.duplicate(previous_slot);
+		link: function (scope, element) {
+			link_slot(scope, element);
+		}
+	}
+	function link_slot(scope, element)
+	{
+		scope.clickSlot = function(slot)
+		{
+			if (scope.build) {
+//				console.log(slot.type.id, TRANSITIONS[slot.type.id]);
+				slot.changeType(TRANSITIONS[slot.type.id], true);
+				return;
+			}
+			if (slot.states.duplicate) {
+				slot.duplicate(previous_slot);
+				previous_slot.reset();
+				scope.gameboard.nextTurn();
+				return;
+			}
+			if (slot.states.jump) {
+				slot.jump(previous_slot);
+				previous_slot.reset();
+				scope.gameboard.nextTurn();
+				return;
+			}
+		} // clickSlot
+		
+		scope.mouseoverSlot = function(slot)
+		{
+			if (slot.type == scope.gameboard.turn) {
+				if (previous_slot) {
 					previous_slot.reset();
-					scope.gameboard.nextTurn();
-					return;
 				}
-				if (slot.states.jump) {
-					slot.jump(previous_slot);
-					previous_slot.reset();
-					scope.gameboard.nextTurn();
-					return;
-				}
+				previous_slot = slot;
+				slot.states.selected = true;
+				hlPossibilities(slot);
+				return;
 			}
-			scope.mouseoverSlot = function (slot) {
-				if (slot.type == scope.gameboard.turn) {
-					if (previous_slot) {
-						previous_slot.reset();
-					}
-					previous_slot = slot;
-					slot.states.selected = true;
-					hlPossibilities(slot);
-					return;
-				}
-				if (slot.action) {
-//					console.log('action');
-					if (previous_action) {
-						previous_action.reset();
-					}
-					previous_action = slot.action;
-					hlActions(slot.action);
-					return;
-				}
-			}
-			function hlActions(action)
-			{
-				var propagate = [];
-				action.to.states['action_'+ action.type] = true;
-				action.from.states['action_'+ action.type] = true;
-				action.to.states['from_'+ action.from.type.id] = true;
-				action.to.eachAround(function (e) {
-					if (e.type == REVERSE[scope.gameboard.turn.id]) {
-						e.states.propagate = true;
-						propagate.push(e);
-					}
-				});
-				previous_action.reset = function ()
-				{
-					delete action.to.states['action_'+ action.type];
-					delete action.from.states['action_'+ action.type];
-					delete action.to.states['from_'+ action.from.type.id];
-					previous_action = null;
-					_.each(propagate, function (e) {
-						delete e.states.propagate;
-					});
-				}
-			}
-			function hlPossibilities(slot)
-			{
-				var actions = [];
-				slot.reset = function ()
-				{
-//					if (previous_action) {
-//						previous_action.reset();
-//					}
-					delete slot.states.selected;
-					_.each(actions, function (e) {
-						delete e.to.states[e.type];
-						delete e.to.action;
-					});
-//					slot.eachAround(function (e) {
-//						delete e.states.duplicate;
-//					});
-//					slot.eachJump(function (e) {
-//						delete e.states.jump;
-//					});
-					previous_slot = null;
-				}
-				switch (slot.type) {
-				case P1:
-				case P2:
-					slot.eachAround(function (e) {
-						if (e.type == EMPTY) {
-							e.states.duplicate = true;
-							e.action = {type: "duplicate", to: e, from: slot};
-							actions.push(e.action);
-						}
-					});
-					slot.eachJump(function (e) {
-						if (e.type == EMPTY) {
-							e.states.jump = true;
-							e.action = {type: "jump", to: e, from: slot};
-							actions.push(e.action);
-						}
-					});
-					break;
-				}
-			}
-			scope.mouseleaveSlot = function (slot) {
+			if (slot.action) {
+//				console.log('action');
 				if (previous_action) {
 					previous_action.reset();
 				}
+				previous_action = slot.action;
+				hlActions(slot.action);
+				return;
 			}
-		}
+		} // mouseoverSlot
+		
+		scope.mouseleaveSlot = function(slot)
+		{
+			if (previous_action) {
+				previous_action.reset();
+			}
+		} // mouseleaveSlot
+		
+		function hlActions(action)
+		{
+			var propagate = [];
+			action.to.states['action_'+ action.type] = true;
+			action.from.states['action_'+ action.type] = true;
+			action.to.states['from_'+ action.from.type.id] = true;
+			action.to.eachAround(function (e) {
+				if (e.type == REVERSE[scope.gameboard.turn.id]) {
+					e.states.propagate = true;
+					propagate.push(e);
+				}
+			});
+			previous_action.reset = function ()
+			{
+				delete action.to.states['action_'+ action.type];
+				delete action.from.states['action_'+ action.type];
+				delete action.to.states['from_'+ action.from.type.id];
+				previous_action = null;
+				_.each(propagate, function (e) {
+					delete e.states.propagate;
+				});
+			}
+		} // hlActions
 	}
+	
+	function hlPossibilities(slot)
+	{
+		var actions = [];
+		slot.reset = function ()
+		{
+			delete slot.states.selected;
+			_.each(actions, function (e) {
+				delete e.to.states[e.type];
+				delete e.to.action;
+			});
+			previous_slot = null;
+		}
+		switch (slot.type) {
+		case P1:
+		case P2:
+			slot.eachAround(function (e) {
+				if (e.type == EMPTY) {
+					e.states.duplicate = true;
+					e.action = {type: "duplicate", to: e, from: slot};
+					actions.push(e.action);
+				}
+			});
+			slot.eachJump(function (e) {
+				if (e.type == EMPTY) {
+					e.states.jump = true;
+					e.action = {type: "jump", to: e, from: slot};
+					actions.push(e.action);
+				}
+			});
+			break;
+		}
+	} // hlPossibilities
 })

@@ -46,7 +46,8 @@ function HistoryState(action, from, to, gameboard)
 		})
 		gameboard.turn = state.turn;
 	}
-}
+} // HistoryState
+
 window.GameBoard = function(conf, scope)
 {
 	var history = this.history = [];
@@ -59,21 +60,28 @@ window.GameBoard = function(conf, scope)
 	this.p2_cpu = true;
 	this.scope = scope;
 	
-	var p1 = {};
-	var p2 = {};
+	var p1 = gameboard.p1 = {};
+	var p2 = gameboard.p2 ={};
 	var scores = this.scores = {p1:0, p2:0};
 	
 	this.max_scores = {p1:0, p2:0};
+
+	this.invertTurn = function () {
+		invertTurn();
+	};
+	this.calcScores = function () {
+		calcScores();
+	};
 	
 	this.nextTurn = function () {
-		gameboard.turn = gameboard.turn == P1 ? P2: P1;
+		invertTurn();
 		calcScores();
 		initTurn();
 		if (gameboard.turn == P2 && gameboard.p2_cpu) {
-			cpuPlay();
+			cpuPlay(gameboard);
 		}
 		if (gameboard.turn == P1 && gameboard.p1_cpu) {
-			cpuPlay();
+			cpuPlay(gameboard);
 		}
 	};
 	
@@ -151,9 +159,6 @@ window.GameBoard = function(conf, scope)
 	confSync = true;
 	
 	calcScores();
-	
-	
-	
 	
 	function Slot(x, y, type)
 	{
@@ -247,7 +252,8 @@ window.GameBoard = function(conf, scope)
 			return historyState;
 		}
 		this.explored = 0;
-	}
+	} // Slot
+	
 	function xy(x, y)
 	{
 		if (x < 0 || x >= conf.w.length || y < 0 || y >= conf.h.length) {
@@ -355,6 +361,10 @@ window.GameBoard = function(conf, scope)
 		})(explored ++);
 		return i;
 	}
+	function invertTurn()
+	{
+		gameboard.turn = gameboard.turn == P1 ? P2: P1;
+	}
 	function calcScores()
 	{
 		setTimeout(function () {
@@ -370,194 +380,6 @@ window.GameBoard = function(conf, scope)
 //			delete e.to.states.hl_duplicate;
 //		})
 	}
-	function crawlActions(items, arg1)
-	{
-		var res = {};
-		_.each(items, function (from) {
-			if (!arg1) {
-				from.eachJump(function (slot) {
-					if (slot.type == EMPTY) {
-						res[slot.xy()] = {action: "jump", to: slot, from: from};
-					}
-				});
-			}
-			from.eachAround(function (slot) {
-				if (slot.type == EMPTY) {
-					res[slot.xy()] = {action: "duplicate", to: slot, from: from};
-				}
-			});
-		})
-//		console.log(res);
-		return res;
-	}
-	function minMax(result, depth)
-	{
-		_.each(result.moves, function (currentMove) {
-			if (!result.best) {
-				result.best = currentMove;
-				result.worst = currentMove;
-			} else {
-				if (depth % 2 == 0) {
-					if (result.best.score < currentMove.score) { result.best = currentMove; }
-					if (result.worst.score > currentMove.score) { result.worst = currentMove; }
-				} else {
-					if (result.best.score > currentMove.score) { result.best = currentMove; }
-					if (result.worst.score < currentMove.score) { result.worst = currentMove; }
-				}
-			}
-		})
-	}
-	function cpuPlay()
-	{
-//		actions = crawlActions(gameboard.turn == P1 ? p1: p2);
-//		_.each(actions, function (e) {
-//			switch (e.action) {
-//			case 'jump':
-//				e.to.states.hl_jump = true;
-//				break;
-//			case 'duplicate':
-//				e.to.states.hl_duplicate = true;
-//				break;
-//			}
-//		})
-		var i = 0;
-		var keys = {};
-		
-		function recursive(curr_turn, depth, callback)
-		{
-			var key = '';
-			_.each(conf.players, function (v, k) {
-				key += k + ':' + v[0] + '.';
-			})
-			if (keys[key]) {
-				callback({status: "ALREADY_EXPLORED"});
-				return;
-			}
-			
-			if (i < 10000) {
-				i ++;
-			} else {
-				callback({status: "ITERATION_LIMIT"});
-				return;
-			}
-			
-			var result = {
-				status: "OK",
-				max_scores: {
-					p1: gameboard.max_scores.p1,
-					p2: gameboard.max_scores.p2
-				},
-				scores: {
-					p1: gameboard.scores.p1,
-					p2: gameboard.scores.p2
-				},
-				moves: [],
-				best: null,
-				worst: null
-			};
-			
-			keys[key] = result;
-			
-			result.score = result.max_scores.p2 - result.max_scores.p1;
-			
-			if (depth > 2) {
-				result.status = "DEPTH_LIMIT";
-				callback(result);
-				return;
-			}
-			
-			var j = 0;
-			
-			_.each(crawlActions(curr_turn == P1 ? p1: p2, false), function (e) {
-				j ++;
-				e.to[e.action](e.from);
-				calcScores();
-				recursive(curr_turn, depth + 1, function (currentMove) {
-					currentMove.move = e;
-					currentMove.parent = result;
-					result.moves.push(currentMove);
-				});
-				minMax(result, depth);
-				gameboard.undo();
-			})
-			callback(result);
-		}
-		
-		recursive(gameboard.turn, 0, function (result) {
-			if (result.best) {
-				var curr = result;
-				var stack = [0];
-				var d = 0;
-				var k = 0;
-				var l = 0, n = 0;
-				var interval = setInterval(function () {
-					var e = curr.moves[stack[d]];
-//					console.log(e.status);
-					l ++;
-					e.move.to[e.move.action](e.move.from);
-					e.move.to.i = stack[d];
-					e.move.to.depth = d;
-					calcScores();
-//					console.log(e.move);
-					gameboard.scope.$apply();
-					if (e.status == "OK") {
-//						console.log('a');
-						curr = e;
-						stack.push(0);
-						d ++;
-					} else {
-//						console.log('b');
-//						console.log('b', e, result.moves, d, stack[d]);
-						stack[d] ++;
-						gameboard.undo();
-						n --;
-						if (!curr.moves[stack[d]]) {
-//							console.log('c');
-							stack.pop();
-							d --;
-//							if (stack.length > 0) {
-//							}
-							if (stack.length == 0) {
-//								gameboard.undo();
-//								console.log(l, n);
-								clearInterval(interval);
-								console.log(result);
-								(function (move) {
-									move.to[move.action](move.from);
-								})(result.best.move);
-								gameboard.nextTurn();
-								gameboard.scope.$apply();
-								return;
-							} else {
-								curr = e.parent;
-								gameboard.undo();
-								n --;
-							}
-						}
-					}
-					k ++;
-//					if (k > 100) {
-//						clearInterval(interval);
-//					}
-				}, 1000);
-				
-//				(function (move) {
-//					move.to[move.action](move.from);
-//				})(result.best.move);
-//				gameboard.nextTurn();
-			}
-			console.log(i, result);
-		});
-		
-//		var worst = recursive(gameboard.turn, 0).worst;
-//		if (worst) {
-//			console.log(worst);
-//			worst.move.to[worst.move.action](worst.move.from);
-//		}
-		
-//		console.log("aaaa");
-//		console.log(actions);
-	}
-}
+} // window.GameBoard
 
 })();

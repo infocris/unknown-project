@@ -5,6 +5,7 @@
 	<script src="http://underscorejs.org/underscore-min.js"></script>
 	<script src="game.js"></script>
 	<script src="app.js"></script>
+	<script src="cpuPlay.js"></script>
 	<link rel="stylesheet" href="display.css" type="text/css" />
 </head>
 <body>
@@ -33,7 +34,8 @@
 			ng-click="clickSlot (slot);" ng-mouseover="hoverSlot (slot);"></slot> -->
 		<slot ng-repeat="slot in gameboard.iterator" ng-class="slot.states" ng-click="clickSlot (slot);"
 			ng-mouseover="mouseoverSlot (slot);" ng-mouseleave="mouseleaveSlot (slot);">
-		{{ slot.depth }}[{{ slot.i }}]</slot>
+<!-- 		{{ slot.depth }}[{{ slot.i }}] -->
+		</slot>
 	</gameboard>
 	<hr/>
 	<div>
