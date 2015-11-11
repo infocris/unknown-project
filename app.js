@@ -42,7 +42,20 @@ app.run(['$rootScope', function (scope) {
 	
 	scope.load = function () {
 		scope.configuration = JSON.parse(scope.configuration_textarea);
-		scope.gameboard = new GameBoard(scope.configuration);
+		scope.gameboard = new GameBoard(scope.configuration, scope);
+	}
+	
+	persist('p1_cpu', false);
+	persist('p2_cpu', false);
+	
+	function persist(k, defaultval)
+	{
+		scope[k] = localStorage[k] ? JSON.parse(localStorage[k]): defaultval;
+		scope.$watch(function () {
+			return scope[k];
+		}, function (value) {
+			localStorage[k] = JSON.stringify(value);
+		})
 	}
 }])
 
@@ -56,6 +69,7 @@ app.directive('gameboard', ['$rootScope', function ($rootScope) {
 				$rootScope.configuration = gameboard.configuration;
 				$rootScope.gameboard = gameboard;
 				gameboard.selected = true;
+				
 //				$rootScope.gameboard = new GameBoard(gameboard.configuration);
 			}
 		}

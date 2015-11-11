@@ -57,13 +57,15 @@ window.GameBoard = function(conf, scope)
 	
 	this.turn = P1;
 	this.configuration = conf;
-	this.p2_cpu = true;
+//	this.p1_cpu = false;
+//	this.p2_cpu = false;
 	this.scope = scope;
 	
 	var p1 = gameboard.p1 = {};
 	var p2 = gameboard.p2 ={};
 	var scores = this.scores = {p1:0, p2:0};
-	
+	var holes_count = 0;
+
 	this.max_scores = {p1:0, p2:0};
 
 	this.invertTurn = function () {
@@ -75,14 +77,30 @@ window.GameBoard = function(conf, scope)
 	
 	this.nextTurn = function () {
 		invertTurn();
+//		setTimeout(function () {
+//			calcScores();
+//		}, 1);
+		
 		calcScores();
+		var max = ((conf.w.length * conf.h.length) - holes_count);
+		if (gameboard.max_scores.p1 + gameboard.max_scores.p2 == max) {
+			gameboard.finished = true;
+			return;
+		}
+		
 		initTurn();
-		if (gameboard.turn == P2 && gameboard.p2_cpu) {
+//		console.log(scope.p1_cpu);
+//		console.log(scope.p2_cpu);
+		if (gameboard.turn == P2 && scope.p2_cpu) {
 			cpuPlay(gameboard);
 		}
-		if (gameboard.turn == P1 && gameboard.p1_cpu) {
+		if (gameboard.turn == P1 && scope.p1_cpu) {
 			cpuPlay(gameboard);
 		}
+	};
+	
+	this.cpuPlay = function () {
+		cpuPlay(gameboard);
 	};
 	
 	this.undo = function () {
@@ -107,6 +125,7 @@ window.GameBoard = function(conf, scope)
 	
 	_.each(conf.holes, function (e) {
 		setType(e[0], e[1], HOLE, true);
+		holes_count += 2;
 	})
 	_.each(conf.players, function (value, key) {
 		switch (value[0]) {
@@ -137,6 +156,7 @@ window.GameBoard = function(conf, scope)
 		_.map(conf.matrix, function (value, key) {
 			switch (value[0]) {
 			case HOLE.serialize:
+				holes_count += 2;
 				setType(value[1], value[2], HOLE, true);
 				break;
 			case P1.serialize:
@@ -157,8 +177,10 @@ window.GameBoard = function(conf, scope)
 //	})
 	
 	confSync = true;
-	
-	calcScores();
+
+	setTimeout(function () {
+		calcScores();
+	}, 1);
 	
 	function Slot(x, y, type)
 	{
@@ -367,10 +389,8 @@ window.GameBoard = function(conf, scope)
 	}
 	function calcScores()
 	{
-		setTimeout(function () {
-			gameboard.max_scores.p1 = countMaxSlots(p1);
-			gameboard.max_scores.p2 = countMaxSlots(p2);
-		}, 1);
+		gameboard.max_scores.p1 = countMaxSlots(p1);
+		gameboard.max_scores.p2 = countMaxSlots(p2);
 	}
 //	var actions = {};
 	function initTurn()
