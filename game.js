@@ -30,6 +30,11 @@ function HistoryState(action, from, to, gameboard)
 	this.type = from.type;
 	this.turn = gameboard.turn;
 	this.propagation = [];
+	this.redo = function () {
+		to[action](from);
+		gameboard.turn = state.turn == P1 ? P2: P1;
+	}
+	this.id = from.xy() + action + to.xy();
 	this.revert = function () {
 		switch (action) {
 		case "duplicate":
@@ -52,9 +57,11 @@ window.GameBoard = function(conf, scope)
 {
 	var history = this.history = [];
 	var table = this.iterator = [];
+	var redoStack = this.redoStack = [];
 	var gameboard = this;
 	var confSync = false;
 	
+	this.allowRedo = true;
 	this.turn = P1;
 	this.configuration = conf;
 //	this.p1_cpu = false;
@@ -74,6 +81,9 @@ window.GameBoard = function(conf, scope)
 	this.calcScores = function () {
 		calcScores();
 	};
+	this.invertTurn = function () {
+		invertTurn();
+	}
 	
 	this.nextTurn = function () {
 		invertTurn();
@@ -81,32 +91,54 @@ window.GameBoard = function(conf, scope)
 //			calcScores();
 //		}, 1);
 		
-		calcScores();
-		var max = ((conf.w.length * conf.h.length) - holes_count);
-		if (gameboard.max_scores.p1 + gameboard.max_scores.p2 == max) {
-			gameboard.finished = true;
-			return;
+		initTurn();
+		
+		var lastRedo = redoStack.pop();
+		if (lastRedo && history.length > 0) {
+			var last = history[history.length-1];
+//			console.log(last.id, lastRedo.id, last == lastRedo);
+			if (last.id != lastRedo.id) {
+				redoStack = gameboard.redoStack = [];
+			}
 		}
 		
-		initTurn();
 //		console.log(scope.p1_cpu);
 //		console.log(scope.p2_cpu);
-		if (gameboard.turn == P2 && scope.p2_cpu) {
-			cpuPlay(gameboard);
-		}
-		if (gameboard.turn == P1 && scope.p1_cpu) {
-			cpuPlay(gameboard);
+		if ((gameboard.turn == P2 && scope.p2_cpu) || (gameboard.turn == P1 && scope.p1_cpu)) {
+			internalCpuPlay();
 		}
 	};
 	
+	function internalCpuPlay()
+	{
+		setTimeout(function () {
+			cpuPlay(gameboard);
+			gameboard.scope.$apply();
+		}, 1);
+	};
+	
 	this.cpuPlay = function () {
-		cpuPlay(gameboard);
+		internalCpuPlay();
 	};
 	
 	this.undo = function () {
 		var last = history.pop();
 		if (last) {
+			if (gameboard.allowRedo) {
+				redoStack.push(last);
+//				console.log(last);
+			}
 			last.revert();
+			initTurn();
+		}
+	};
+	
+	this.redo = function () {
+		var last = redoStack.pop();
+		if (last) {
+			last.redo();
+//			history.push(last);
+			initTurn();
 		}
 	};
 	
@@ -395,6 +427,14 @@ window.GameBoard = function(conf, scope)
 //	var actions = {};
 	function initTurn()
 	{
+		calcScores();
+		gameboard.finished = false;
+		var max = ((conf.w.length * conf.h.length) - holes_count);
+		if (gameboard.max_scores.p1 + gameboard.max_scores.p2 == max) {
+			gameboard.finished = true;
+			return;
+		}
+		
 //		_.each(actions, function (e) {
 //			delete e.to.states.hl_jump;
 //			delete e.to.states.hl_duplicate;

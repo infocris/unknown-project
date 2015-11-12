@@ -5,6 +5,7 @@ app.run(['$rootScope', function (scope) {
 	scope.gameboards = [];
 	scope.build = false;
 	var list = [
+{"w":{"length":8,"sym_offset":8},"h":{"length":8,"sym_offset":8},"holes":{"9":[1,1],"18":[2,2],"34":[2,4],"43":[3,5],"50":[2,6]},"players":{"10":[1,2,1],"17":[2,1,2],"19":[1,3,2],"24":[2,0,3],"25":[2,1,3],"26":[1,2,3],"27":[1,3,3],"28":[1,4,3],"32":[2,0,4],"33":[2,1,4],"35":[1,3,4],"37":[1,5,4],"40":[2,0,5],"41":[2,1,5],"42":[2,2,5],"44":[1,4,5],"46":[1,6,5],"49":[2,1,6],"51":[1,3,6],"53":[1,5,6],"58":[1,2,7],"59":[1,3,7],"60":[1,4,7]}},
 {"w":{"length":8,"sym_offset":8},"h":{"length":8,"sym_offset":8},"holes":{"10":[2,1],"17":[1,2],"18":[2,2],"41":[1,5],"42":[2,5],"50":[2,6]},"players":{"0":[1,0,0],"1":[1,1,0],"2":[2,2,0],"3":[1,3,0],"4":[1,4,0],"5":[1,5,0],"8":[1,0,1],"9":[1,1,1],"11":[1,3,1],"12":[1,4,1],"16":[2,0,2],"19":[1,3,2],"20":[1,4,2],"24":[2,0,3],"25":[2,1,3],"26":[2,2,3],"27":[1,3,3],"28":[1,4,3],"29":[1,5,3],"33":[2,1,4],"34":[2,2,4],"35":[1,3,4],"36":[1,4,4],"43":[1,3,5],"54":[1,6,6],"58":[1,2,7],"60":[1,4,7],"61":[1,5,7],"62":[1,6,7],"63":[1,7,7]}},
 {"w":{"length":8,"sym_offset":8},"h":{"length":8,"sym_offset":8},"holes":{"10":[2,1],"17":[1,2],"18":[2,2],"41":[1,5],"42":[2,5],"50":[2,6]},"players":{"0":[1,0,0],"1":[1,1,0],"2":[2,2,0],"3":[2,3,0],"4":[2,4,0],"5":[2,5,0],"8":[1,0,1],"9":[1,1,1],"11":[2,3,1],"16":[2,0,2],"19":[2,3,2],"24":[2,0,3],"25":[2,1,3],"26":[2,2,3],"27":[2,3,3],"29":[2,5,3],"32":[2,0,4],"34":[2,2,4],"35":[2,3,4],"36":[2,4,4],"37":[2,5,4],"38":[2,6,4],"39":[2,7,4],"43":[1,3,5],"44":[2,4,5],"47":[2,7,5],"49":[1,1,6],"51":[1,3,6],"52":[1,4,6],"54":[1,6,6],"55":[1,7,6],"58":[1,2,7],"59":[1,3,7],"60":[1,4,7],"61":[1,5,7],"62":[1,6,7],"63":[1,7,7]}},
 {"w":{"length":8,"sym_offset":8},"h":{"length":8,"sym_offset":8},"holes":{"10":[2,1],"17":[1,2],"18":[2,2],"41":[1,5],"42":[2,5],"50":[2,6]},"players":{"0":[1,0,0],"1":[1,1,0],"2":[2,2,0],"3":[2,3,0],"4":[2,4,0],"5":[2,5,0],"9":[1,1,1],"11":[2,3,1],"58":[1,2,7],"59":[1,3,7],"60":[1,4,7],"61":[1,5,7],"62":[2,6,7],"63":[2,7,7]}},
@@ -44,17 +45,21 @@ app.run(['$rootScope', function (scope) {
 		scope.configuration = JSON.parse(scope.configuration_textarea);
 		scope.gameboard = new GameBoard(scope.configuration, scope);
 	}
-	
+
+	persist('cpu_async', true);
+	persist('cpu_timeout', 10);
+	persist('cpu_maxdepth', 5);
+	persist('cpu_maxactions', 5000);
 	persist('p1_cpu', false);
 	persist('p2_cpu', false);
 	
 	function persist(k, defaultval)
 	{
-		scope[k] = localStorage[k] ? JSON.parse(localStorage[k]): defaultval;
+		scope[k] = localStorage[k] ? JSON.parse(localStorage[k]).value: defaultval;
 		scope.$watch(function () {
 			return scope[k];
 		}, function (value) {
-			localStorage[k] = JSON.stringify(value);
+			localStorage[k] = JSON.stringify({value: value});
 		})
 	}
 }])
@@ -63,7 +68,8 @@ app.directive('gameboard', ['$rootScope', function ($rootScope) {
 	return {
 		restrict: 'E',
 		link: function(scope, element) {
-			scope.selectGameboard = function (gameboard) {
+			scope.selectGameboard = function (gameboard)
+			{
 //				gameboard.selected = true;
 				$rootScope.gameboard.selected = false;
 				$rootScope.configuration = gameboard.configuration;
@@ -72,6 +78,10 @@ app.directive('gameboard', ['$rootScope', function ($rootScope) {
 				
 //				$rootScope.gameboard = new GameBoard(gameboard.configuration);
 			}
+			scope.mouseleaveGameboard = function(gameboard)
+			{
+				
+			} // mouseleaveGameboard
 		}
 	}
 }])

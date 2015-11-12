@@ -23,12 +23,19 @@
 		<score class="p2"">{{ gameboard.scores.p2 }}</score>
 		<score class="p1">{{ gameboard.max_scores.p1 }}</score>
 		<score class="p2"">{{ gameboard.max_scores.p2 }}</score>
-		<button ng-click="gameboard.nextTurn();" style="width: 100px;"
+		<button ng-click="gameboard.invertTurn();" style="width: 100px;"
 			ng-class="gameboard.turn.id == 'p1' ? 'green': 'red'">{{ gameboard.turn.id == 'p1' ? "GREEN": "RED" }}</button>
 		<button ng-click="gameboard.undo();" ng-disabled="gameboard.history.length == 0">Undo</button>
+		<button ng-click="gameboard.redo();" ng-disabled="gameboard.redoStack.length == 0">Redo</button>
+		<br/>
 		<label><input type="checkbox" ng-model="p1_cpu"> Green CPU</label>
 		<label><input type="checkbox" ng-model="p2_cpu"> Red CPU</label>
 		<button ng-click="gameboard.cpuPlay();">CPU Play</button>
+		<input type="number" ng-model="cpu_maxdepth" />
+		<input type="number" ng-model="cpu_maxactions" style="width: 100px;" />
+		<input type="number" ng-model="cpu_timeout" />
+		<input type="checkbox" ng-model="cpu_async" />
+		{{ actions_count }}
 	</div>
 	<div ng-show="gameboard.finished" style="position: absolute; font-family: monospace; font-size: 48pt;
 		color: #555; width: 100%; text-align: center; padding-top: 100px; height: 250px;
@@ -37,7 +44,9 @@
 		<if ng-show="gameboard.max_scores.p1 > gameboard.max_scores.p2">Green wins.</if>
 		<if ng-show="gameboard.max_scores.p1 == gameboard.max_scores.p2">Draw.</if>
 	</div>
-	<gameboard class="big" ng-class="[build ? 'build': '', 'turn_' + gameboard.turn.id]" ng-style="{width:(configuration.w.length * 52 )+'px'}">
+	<gameboard class="big" ng-class="[build ? 'build': '', 'turn_' + gameboard.turn.id]"
+		ng-mouseleave="mouseleaveGameboard (gameboard);"
+		ng-style="{width:(configuration.w.length * 52 )+'px'}">
 <!-- 		<slot ng-repeat="slot in gameboard.iterator" ng-class="[slot.type.id, slot.state]" ng-class="slot.state"
 			ng-click="clickSlot (slot);" ng-mouseover="hoverSlot (slot);"></slot> -->
 		<slot ng-repeat="slot in gameboard.iterator" ng-class="slot.states" ng-click="clickSlot (slot);"
@@ -45,6 +54,7 @@
 <!-- 		{{ slot.depth }}[{{ slot.i }}] -->
 		</slot>
 	</gameboard>
+	
 	<hr/>
 	<div>
 		<button ng-click="build = !build;">Build Mode {{ build ? "ON": "OFF" }}</button>

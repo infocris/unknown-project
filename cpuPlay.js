@@ -1,32 +1,28 @@
 
 function cpuPlay(gameboard)
 {
+	var gameboard_copy = new GameBoard(gameboard.configuration);
+	var original_gameboard = gameboard;
+	var scope = gameboard.scope;
+	
+	if (!scope.cpu_async) {
+		gameboard_copy.turn = original_gameboard.turn;
+		gameboard = gameboard_copy;
+	}
+	
 	var i = 0;
 	var l = 0;
 	var keys = {};
 	var stack = [];
 	var async = false;
 	var sync = false;
-	var timeout = 10;
+	var timeout = scope.cpu_timeout;
 	var maxdepth, max_actions;
 	
 	var turn = gameboard.turn;
 	
-//	maxdepth = 2;
-//	max_actions = 120;
-	
-//	maxdepth = 5;
-//	max_actions = 10;
-	
-	timeout = 5;
-//	maxdepth = 8;
-//	maxdepth = 25;
-	maxdepth = 63;
-	max_actions = 63;
-	max_actions = 64;
-	
-	maxdepth = 5;
-	max_actions = 5000;
+	maxdepth = scope.cpu_maxdepth;
+	max_actions = scope.cpu_maxactions;
 
 	gameboard.calcScores();
 	
@@ -46,20 +42,28 @@ function cpuPlay(gameboard)
 	stack.push(crawl);
 	
 	var loop = true;
-	sync = true;
+	sync = !scope.cpu_async;
 	
 	if (sync) {
+		gameboard.allowRedo = false;
 		while (loop) {
 			step(function () {
 				loop = false;
 				console.log(i, crawl);
-				
+				scope.actions_count = i;
 //				return;
+//				(function (move) {
+//					move.to[move.action](move.from);
+//				})(crawl.result.best.move);
+				
 				(function (move) {
-					move.to[move.action](move.from);
+//					original_gameboard.iterator[move.to.xy()][move.action](move.from);
+					original_gameboard.iterator[move.to.xy()][move.action](original_gameboard.iterator[move.from.xy()]);
 				})(crawl.result.best.move);
-				gameboard.calcScores();
-				gameboard.nextTurn();
+				
+				original_gameboard.calcScores();
+				original_gameboard.nextTurn();
+				original_gameboard.allowRedo = true;
 			});
 		}
 		return;
@@ -72,6 +76,7 @@ function cpuPlay(gameboard)
 		i = 0;
 		keys = {};
 		stack.push(crawl);
+		gameboard.allowRedo = false;
 	}
 	
 	async = true;
@@ -80,14 +85,15 @@ function cpuPlay(gameboard)
 			clearInterval(interval);
 			console.log(i, crawl);
 			
-			return;
+//			return;
 			(function (move) {
 				move.to[move.action](move.from);
 				if (async) {
-					gameboard.scope.$apply();
+					scope.$apply();
 				}
 			})(crawl.result.best.move);
 			gameboard.nextTurn();
+			gameboard.allowRedo = true;
 		});
 	}, timeout);
 	
@@ -109,14 +115,14 @@ function cpuPlay(gameboard)
 //			console.log("undo", context);
 			gameboard.undo();
 			if (async) {
-				gameboard.scope.$apply();
+				scope.$apply();
 			}
 			return;
 		}
 		
 		if (context.crawl) {
 //			console.log("depth", context.depth);
-			if (i > max_actions) {
+			if (i >= max_actions) {
 				context.leaf = true;
 				context.scoring = createScoring(gameboard, turn);
 				return;
@@ -164,7 +170,7 @@ function cpuPlay(gameboard)
 		if (context.action) {
 //			if (context.undo) {
 //				gameboard.undo();
-//				gameboard.scope.$apply();
+//				scope.$apply();
 //				minMax(context);
 //				return;
 //			}
@@ -176,7 +182,7 @@ function cpuPlay(gameboard)
 			context.to[context.action](context.from);
 			
 			if (async) {
-				gameboard.scope.$apply();
+				scope.$apply();
 			}
 			
 //			context.undo = true;
@@ -238,6 +244,11 @@ function crawlActions(items, arg1)
 {
 	var res = {};
 	_.each(items, function (from) {
+		from.eachAround(function (slot) {
+			if (slot.type == EMPTY) {
+				res[slot.xy()] = {action: "duplicate", to: slot, from: from};
+			}
+		});
 		if (!arg1) {
 			from.eachJump(function (slot) {
 				if (slot.type == EMPTY) {
@@ -245,11 +256,6 @@ function crawlActions(items, arg1)
 				}
 			});
 		}
-		from.eachAround(function (slot) {
-			if (slot.type == EMPTY) {
-				res[slot.xy()] = {action: "duplicate", to: slot, from: from};
-			}
-		});
 	})
 //	console.log(res);
 	return res;
